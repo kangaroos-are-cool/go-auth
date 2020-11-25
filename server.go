@@ -154,7 +154,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 func secretHandler(w http.ResponseWriter, r *http.Request) {
 
 	c, err := r.Cookie("token")
-	fmt.Println(c)
+	//fmt.Println(c)
 	if err != nil {
 		if err == http.ErrNoCookie {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -282,6 +282,7 @@ func main() {
 	http.HandleFunc("/secret", secretHandler)
 	http.HandleFunc("/", homeHandler)
 
+	fmt.Println("Small web app with go-based backend for learning go and having fun")
 	fmt.Println(&AppDetails{getEnv("BASE_URL"), getEnv("APP_PORT")})
 
 	//log.Fatal(http.ListenAndServe(":"+getEnv("APP_PORT"), nil))
