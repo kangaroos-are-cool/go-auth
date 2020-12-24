@@ -94,7 +94,7 @@ func registrationHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		//fmt.Fprintf(w, data["username"].(string))
+
 		// need to hash password
 		username := []byte(data["username"].(string))
 
