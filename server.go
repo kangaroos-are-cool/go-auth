@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -81,7 +82,6 @@ func registrationHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Fatal("Could not load template")
 		}
-		//a := &AppDetails{getEnv("BASE_URL"), getEnv("APP_PORT")}
 		t.Execute(w, nil)
 	case "POST":
 		body, err := ioutil.ReadAll(r.Body)
@@ -97,6 +97,10 @@ func registrationHandler(w http.ResponseWriter, r *http.Request) {
 		//fmt.Fprintf(w, data["username"].(string))
 		// need to hash password
 		username := []byte(data["username"].(string))
+
+		username = []byte(html.EscapeString(data["username"].(string)))
+		fmt.Println("User attempting to register with username:", html.EscapeString(data["username"].(string)))
+
 		password := []byte(data["password"].(string))
 
 		// connect to MongoDB client
@@ -275,6 +279,42 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func imageHandler(w http.ResponseWriter, r *http.Request) http.Handler {
+	c, err := r.Cookie("token")
+	//fmt.Println(c)
+	if err != nil {
+		if err == http.ErrNoCookie {
+			w.WriteHeader(http.StatusUnauthorized)
+			return nil
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		return nil
+	}
+
+	// Get the JWT string from the cookie
+	tknStr := c.Value
+
+	claims := &Claims{}
+
+	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			w.WriteHeader(http.StatusUnauthorized)
+			return nil
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		return nil
+	}
+	if !tkn.Valid {
+		w.WriteHeader(http.StatusUnauthorized)
+		return nil
+	}
+
+	return http.StripPrefix("/pics/", http.FileServer(http.Dir("pictures")))
+}
+
 func main() {
 	// register handlers
 	http.HandleFunc("/register", registrationHandler)
@@ -282,9 +322,11 @@ func main() {
 	http.HandleFunc("/secret", secretHandler)
 	http.HandleFunc("/", homeHandler)
 
+	// need to serve static image for secret dog picture
+	http.Handle("/pics/", http.StripPrefix("/pics/", http.FileServer(http.Dir("pictures"))))
+
 	fmt.Println("Small web app with go-based backend for learning go and having fun")
 	fmt.Println(&AppDetails{getEnv("BASE_URL"), getEnv("APP_PORT")})
 
-	//log.Fatal(http.ListenAndServe(":"+getEnv("APP_PORT"), nil))
 	log.Fatal(http.ListenAndServeTLS(":"+getEnv("APP_PORT"), "server.crt", "server.key", nil))
 }
